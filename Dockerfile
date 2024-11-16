@@ -1,34 +1,39 @@
-FROM python:3.11.0b1-buster
+# Use a stable Python 3.11 base image
+FROM python:3.11-buster
 
-# set work directory
+# Set work directory
 WORKDIR /app
 
-
-# dependencies for psycopg2
-RUN apt-get update && apt-get install --no-install-recommends -y dnsutils=1:9.11.5.P4+dfsg-5.1+deb10u9 libpq-dev=11.16-0+deb10u1 python3-dev=3.7.3-1 \
+# Install dependencies for psycopg2 and other necessary packages
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    dnsutils \
+    libpq-dev \
+    python3-dev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+# Set environment variables with correct syntax
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Set environment variables
-ENV=PYTHONDONTWRITEBYTECODE 1
-ENV=PYTHONUNBUFFERED 1
-
-
-# Install dependencies
+# Upgrade pip to a specific version if necessary
 RUN python -m pip install --no-cache-dir pip==22.0.4
-COPY requirements.txt requirements.txt
+
+# Copy and install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-
-# copy project
+# Copy the entire project
 COPY . /app/
 
-
-# install pygoat
+# Expose the desired port
 EXPOSE 8000
 
+# Apply database migrations
+RUN python manage.py migrate
 
-RUN python3 /app/manage.py migrate
+# Set the working directory to your Django project (if applicable)
 WORKDIR /app/pygoat/
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers","6", "pygoat.wsgi"]
+
+# Define the default command to run your application
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "6", "pygoat.wsgi"]
